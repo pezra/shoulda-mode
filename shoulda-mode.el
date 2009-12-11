@@ -130,7 +130,7 @@
 (defun shoulda-verify ()
   "Runs the specified spec, or the spec file for the current buffer."
   (interactive)
-  (shoulda-run-single-file (shoulda-spec-file-for (buffer-file-name)) "--format specdoc" "--reverse"))
+  (shoulda-run-single-file (shoulda-spec-file-for (buffer-file-name))))
 
 (defun shoulda-verify-single ()
   "Runs the specified example at the point of the current buffer."
@@ -141,7 +141,7 @@
   "Runs the 'spec' rake task for the project of the current file."
   (interactive)
   (let ((default-directory (or (shoulda-project-root) default-directory)))
-    (shoulda-run "--format=progress")))
+    (shoulda-run)))
 
 (defun shoulda-toggle-spec-and-target ()
   "Switches to the spec for the current buffer if it is a
@@ -164,7 +164,7 @@
   "Find the target for a-spec-file-name"
   (first 
    (file-expand-wildcards 
-    (replace-regexp-in-string "/spec/" "/*/" (shoulda-targetize-file-name a-spec-file-name)))))
+    (replace-regexp-in-string "/test/" "/*/" (shoulda-targetize-file-name a-spec-file-name)))))
 
 (defun shoulda-specize-file-name (a-file-name)
   "Returns a-file-name but converted in to a spec file name"
@@ -221,10 +221,9 @@
 (defun shoulda-example-name-at-point ()
   "Returns the name of the example in which the point is currently positioned; or nil if it is outside of and example"
   (save-excursion 
-;;    (shoulda-beginning-of-example)
     (end-of-line)
-    (re-search-backward "\\(should\\|context\\)[[:space:]]+['\"]\\(.*\\)['\"][[:space:]]*\\(do\\|DO\\|Do\\|{\\)")
-    (match-string 2)))
+    (re-search-backward "\\(\\(should\\|context\\)[[:space:]]+['\"]\\|def[[:space:]]+test_\\)\\(.*\\)\\(['\"][[:space:]]*\\(do\\|DO\\|Do\\|{\\)\\)?")
+    (match-string 3)))
                     
 (defun shoulda-register-verify-redo (redoer)
   "Register a bit of code that will repeat a verification process"
@@ -299,7 +298,7 @@ as the value of the symbol, and the hook as the function definition."
 
 ;; Setup better shoulda output output
 (require 'mode-compile)
-(add-to-list 'compilation-error-regexp-alist '("\\(.*?\\)\\([0-9A-Za-z_./\:-]+\\.rb\\):\\([0-9]+\\)" 2 3))
+(add-to-list 'compilation-error-regexp-alist '(("\\([0-9A-Za-z_./\:-]+\\.rb\\):\\([0-9]+\\)" 1 2)))
 (add-to-list 'mode-compile-modes-alist '(shoulda-mode . (respec-compile kill-compilation)))
 
 

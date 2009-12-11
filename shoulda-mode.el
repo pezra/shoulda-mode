@@ -1,9 +1,9 @@
 ;;
-;; RSpec (minor) mode
+;; Shoulda (minor) mode
 ;; ==================
 ;;
 ;; This minor mode provides some enhancements to ruby-mode in
-;; the contexts of RSpec specifications.  Namely, it provides the
+;; the contexts of Shoulda specifications.  Namely, it provides the
 ;; following capabilities:
 ;;
 ;;  * toggle back and forth between a spec and it's target (bound to
@@ -52,25 +52,25 @@
 
 (require 'ruby-mode)
 
-(defconst rspec-mode-abbrev-table (make-abbrev-table))
+(defconst shoulda-mode-abbrev-table (make-abbrev-table))
 
-(defconst rspec-mode-keymap (make-sparse-keymap) "Keymap used in rspec mode")
+(defconst shoulda-mode-keymap (make-sparse-keymap) "Keymap used in shoulda mode")
 
-(define-key rspec-mode-keymap (kbd "C-c ,v") 'rspec-verify)
-(define-key rspec-mode-keymap (kbd "C-c ,s") 'rspec-verify-single)
-(define-key rspec-mode-keymap (kbd "C-c ,a") 'rspec-verify-all)
-(define-key rspec-mode-keymap (kbd "C-c ,d") 'rspec-toggle-example-pendingness)
-(define-key rspec-mode-keymap (kbd "C-c ,t") 'rspec-toggle-spec-and-target)
+(define-key shoulda-mode-keymap (kbd "C-c ,v") 'shoulda-verify)
+(define-key shoulda-mode-keymap (kbd "C-c ,s") 'shoulda-verify-single)
+(define-key shoulda-mode-keymap (kbd "C-c ,a") 'shoulda-verify-all)
+(define-key shoulda-mode-keymap (kbd "C-c ,d") 'shoulda-toggle-example-pendingness)
+(define-key shoulda-mode-keymap (kbd "C-c ,t") 'shoulda-toggle-spec-and-target)
 
-(define-minor-mode rspec-mode
-  "Minor mode for rSpec files"
-  :lighter " rSpec"
-  :keymap  rspec-mode-keymap)
+(define-minor-mode shoulda-mode
+  "Minor mode for shoulda files"
+  :lighter " shoulda"
+  :keymap  shoulda-mode-keymap)
 
 ;; Snippets
 (if (require 'snippet nil t)
     (snippet-with-abbrev-table
-     'rspec-mode-abbrev-table
+     'shoulda-mode-abbrev-table
      ("helper" . "require 'pathname'\nrequire Pathname(__FILE__).dirname + '../spec_helper'\n\n$.")
      ("desc"   . "describe $${ClassName} do\n  $.\nend ")
      ("descm"  . "describe $${ClassName}, \"$${modifier}\" do\n  $.\nend ")
@@ -79,201 +79,203 @@
   )
 
 
-(defun rspec-beginning-of-example ()
+(defun shoulda-beginning-of-example ()
   "Moves point to the beginning of the example in which the point current is."
   (interactive)
   (let ((start (point)))
     (goto-char 
      (save-excursion
        (end-of-line)
-       (unless (and (search-backward-regexp "^[[:space:]]*it[[:space:]]*(?[\"']" nil t)
+       (unless (and (search-backward-regexp "^[[:space:]]*should[[:space:]]*(?[\"']" nil t)
                     (save-excursion (ruby-end-of-block) (< start (point))))
          (error "Unable to find an example"))
        (point)))))
 
-(defun rspec-example-pending-p ()
+(defun shoulda-example-pending-p ()
   "True if the example under point is pending. Otherwise false"
   (interactive)
   (save-excursion
-    (rspec-beginning-of-example)
+    (shoulda-beginning-of-example)
     (re-search-forward "^[[:space:]]*pending\\([[:space:](]\\|$\\)" (save-excursion (ruby-end-of-block) (point)) t)))
 
 
-(defun rspec-toggle-example-pendingness ()
+(defun shoulda-toggle-example-pendingness ()
   "Disables active examples and enables pending examples."
   (interactive)
-  (if (rspec-example-pending-p)
-      (rspec-enable-example)
-    (rspec-disable-example)))
+  (if (shoulda-example-pending-p)
+      (shoulda-enable-example)
+    (shoulda-disable-example)))
 
-(defun rspec-disable-example ()
+(defun shoulda-disable-example ()
   "Disable the example in which the point is located"
   (interactive)
-  (when (not (rspec-example-pending-p))   
+  (when (not (shoulda-example-pending-p))   
     (save-excursion
-      (rspec-beginning-of-example)
+      (shoulda-beginning-of-example)
       (end-of-line)
       (insert "\npending")
       (indent-for-tab-command))))
 
-(defun rspec-enable-example ()
+(defun shoulda-enable-example ()
   "Enable the example in which the point is located"
   (interactive)
-  (when (rspec-example-pending-p)
+  (when (shoulda-example-pending-p)
     (save-excursion
-      (rspec-beginning-of-example)
+      (shoulda-beginning-of-example)
       (search-forward-regexp "^[[:space:]]*pending\\([[:space:](]\\|$\\)" (save-excursion (ruby-end-of-block) (point)))
       (beginning-of-line)
       (delete-region (save-excursion (beginning-of-line) (point)) 
                      (save-excursion (forward-line 1) (point))))))
   
-(defun rspec-verify ()
+(defun shoulda-verify ()
   "Runs the specified spec, or the spec file for the current buffer."
   (interactive)
-  (rspec-run-single-file (rspec-spec-file-for (buffer-file-name)) "--format specdoc" "--reverse"))
+  (shoulda-run-single-file (shoulda-spec-file-for (buffer-file-name)) "--format specdoc" "--reverse"))
 
-(defun rspec-verify-single ()
+(defun shoulda-verify-single ()
   "Runs the specified example at the point of the current buffer."
   (interactive)
-  (rspec-run-single-file (rspec-spec-file-for (buffer-file-name)) "--format specdoc" "--reverse" (concat "--line " (number-to-string (line-number-at-pos)))))
+  (shoulda-run-single-file (buffer-file-name) "-n" (concat "\"/" (replace-regexp-in-string "/" "\\\\/" (shoulda-example-name-at-point)) "/\"")))
  
-(defun rspec-verify-all ()
+(defun shoulda-verify-all ()
   "Runs the 'spec' rake task for the project of the current file."
   (interactive)
-  (let ((default-directory (or (rspec-project-root) default-directory)))
-    (rspec-run "--format=progress")))
+  (let ((default-directory (or (shoulda-project-root) default-directory)))
+    (shoulda-run "--format=progress")))
 
-(defun rspec-toggle-spec-and-target ()
+(defun shoulda-toggle-spec-and-target ()
   "Switches to the spec for the current buffer if it is a
    non-spec file, or switch to the target of the current buffer
    if the current is a spec"
   (interactive)
   (find-file
-   (if (rspec-buffer-is-spec-p)
-       (rspec-target-file-for (buffer-file-name))
-     (rspec-spec-file-for (buffer-file-name)))))
+   (if (shoulda-buffer-is-spec-p)
+       (shoulda-target-file-for (buffer-file-name))
+     (shoulda-spec-file-for (buffer-file-name)))))
 
-(defun rspec-spec-file-for (a-file-name)
+(defun shoulda-spec-file-for (a-file-name)
   "Find spec for the specified file"
-  (if (rspec-spec-file-p a-file-name)
+  (if (shoulda-spec-file-p a-file-name)
       a-file-name
-    (rspec-specize-file-name (expand-file-name (replace-regexp-in-string "^\\.\\./[^/]+/" "" (file-relative-name a-file-name (rspec-spec-directory a-file-name))) 
-                                               (rspec-spec-directory a-file-name)))))
+    (shoulda-specize-file-name (expand-file-name (replace-regexp-in-string "^\\.\\./[^/]+/" "" (file-relative-name a-file-name (shoulda-spec-directory a-file-name))) 
+                                               (shoulda-spec-directory a-file-name)))))
 
-(defun rspec-target-file-for (a-spec-file-name)
+(defun shoulda-target-file-for (a-spec-file-name)
   "Find the target for a-spec-file-name"
   (first 
    (file-expand-wildcards 
-    (replace-regexp-in-string "/spec/" "/*/" (rspec-targetize-file-name a-spec-file-name)))))
+    (replace-regexp-in-string "/spec/" "/*/" (shoulda-targetize-file-name a-spec-file-name)))))
 
-(defun rspec-specize-file-name (a-file-name)
+(defun shoulda-specize-file-name (a-file-name)
   "Returns a-file-name but converted in to a spec file name"
   (concat
    (file-name-directory a-file-name)
-   (replace-regexp-in-string "\\(\\.rb\\)?$" "_spec.rb" (file-name-nondirectory a-file-name))))
+   (replace-regexp-in-string "\\(\\.rb\\)?$" "_test.rb" (file-name-nondirectory a-file-name))))
 
-(defun rspec-targetize-file-name (a-file-name)
+(defun shoulda-targetize-file-name (a-file-name)
   "Returns a-file-name but converted into a non-spec file name"
      (concat (file-name-directory a-file-name)
-             (rspec-file-name-with-default-extension 
-              (replace-regexp-in-string "_spec\\.rb" "" (file-name-nondirectory a-file-name)))))
+             (shoulda-file-name-with-default-extension 
+              (replace-regexp-in-string "_test\\.rb" "" (file-name-nondirectory a-file-name)))))
   
-(defun rspec-file-name-with-default-extension (a-file-name)
+(defun shoulda-file-name-with-default-extension (a-file-name)
   "Adds .rb file extension to a-file-name if it does not already have an extension"
   (if (file-name-extension a-file-name)
       a-file-name ;; file has a extension already so do nothing
     (concat a-file-name ".rb")))
         
-(defun rspec-directory-subdirectories (directory)
+(defun shoulda-directory-subdirectories (directory)
   "Returns list of subdirectories"
   (remove-if 
    (lambda (dir) (or (string-match "^\\.\\.?$" (file-name-nondirectory dir)) 
                      (not (file-directory-p dir))))
    (directory-files directory t)))
 
-(defun rspec-parent-directory (a-directory)
+(defun shoulda-parent-directory (a-directory)
   "Returns the directory of which a-directory is a child"
   (file-name-directory (directory-file-name a-directory)))
 
-(defun rspec-root-directory-p (a-directory)
+(defun shoulda-root-directory-p (a-directory)
   "Returns t if a-directory is the root"
-  (equal a-directory (rspec-parent-directory a-directory)))
+  (equal a-directory (shoulda-parent-directory a-directory)))
    
-(defun rspec-spec-directory (a-file)
+(defun shoulda-spec-directory (a-file)
   "Returns the nearest spec directory that could contain specs for a-file"
   (if (file-directory-p a-file)
       (or
        (first (directory-files a-file t "^spec$"))
-       (if (rspec-root-directory-p a-file)
+       (if (shoulda-root-directory-p a-file)
            nil
-         (rspec-spec-directory (rspec-parent-directory a-file))))
-    (rspec-spec-directory (rspec-parent-directory a-file))))
+         (shoulda-spec-directory (shoulda-parent-directory a-file))))
+    (shoulda-spec-directory (shoulda-parent-directory a-file))))
 
-(defun rspec-spec-file-p (a-file-name)
+(defun shoulda-spec-file-p (a-file-name)
   "Returns true if the specified file is a spec"
-  (string-match "\\(_\\|-\\)spec\\.rb$" a-file-name))
+  (string-match "\\(_\\|-\\)test\\.rb$" a-file-name))
 
-(defun rspec-buffer-is-spec-p ()
+(defun shoulda-buffer-is-spec-p ()
   "Returns true if the current buffer is a spec"
   (and (buffer-file-name)
-       (rspec-spec-file-p (buffer-file-name))))
+       (shoulda-spec-file-p (buffer-file-name))))
 
-(defun rspec-example-name-at-point ()
+(defun shoulda-example-name-at-point ()
   "Returns the name of the example in which the point is currently positioned; or nil if it is outside of and example"
   (save-excursion 
-    (rspec-beginning-of-example)
-    (re-search-forward "it[[:space:]]+['\"]\\(.*\\)['\"][[:space:]]*\\(do\\|DO\\|Do\\|{\\)")
-    (match-string 1)))
+;;    (shoulda-beginning-of-example)
+    (end-of-line)
+    (re-search-backward "\\(should\\|context\\)[[:space:]]+['\"]\\(.*\\)['\"][[:space:]]*\\(do\\|DO\\|Do\\|{\\)")
+    (match-string 2)))
                     
-(defun rspec-register-verify-redo (redoer)
+(defun shoulda-register-verify-redo (redoer)
   "Register a bit of code that will repeat a verification process"
   (let ((redoer-cmd (eval (append '(lambda () (interactive)) (list redoer)))))
     (global-set-key (kbd "C-c ,r") redoer-cmd)))
 
-(defun rspec-run (&rest opts)
+(defun shoulda-run (&rest opts)
   "Runs spec with the specified options"
-  (rspec-register-verify-redo (cons 'rspec-run opts))
+  (shoulda-register-verify-redo (cons 'shoulda-run opts))
   (compile (concat "rake spec SPEC_OPTS=\'" (mapconcat (lambda (x) x) opts " ") "\'") t)
   (end-of-buffer-other-window 0))
 
-(defun rspec-run-single-file (spec-file &rest opts)
+(defun shoulda-run-single-file (spec-file &rest opts)
   "Runs spec with the specified options"
-  (rspec-register-verify-redo (cons 'rspec-run-single-file (cons spec-file opts)))
-  (compile (concat "rake spec SPEC=\'" spec-file "\' SPEC_OPTS=\'" (mapconcat (lambda (x) x) opts " ") "\'") t)
+  (shoulda-register-verify-redo (cons 'shoulda-run-single-file (cons spec-file opts)))
+  (message (concat "ruby " spec-file " " (mapconcat (lambda (x) x) opts " ")))
+  (compile (concat "ruby " spec-file " " (mapconcat (lambda (x) x) opts " ")) t)
   (end-of-buffer-other-window 0))
 
-(defun rspec-project-root (&optional directory)
+(defun shoulda-project-root (&optional directory)
   "Finds the root directory of the project by walking the directory tree until it finds a rake file."
   (let ((directory (file-name-as-directory (or directory default-directory))))
-    (cond ((rspec-root-directory-p directory) nil)
+    (cond ((shoulda-root-directory-p directory) nil)
           ((file-exists-p (concat directory "Rakefile")) directory)
-          (t (rspec-project-root (file-name-directory (directory-file-name directory)))))))
+          (t (shoulda-project-root (file-name-directory (directory-file-name directory)))))))
 
-;; Makes sure that rSpec buffers are given the rspec minor mode by default
+;; Makes sure that shoulda buffers are given the shoulda minor mode by default
 (add-hook 'ruby-mode-hook
           (lambda ()
-            (when (rspec-buffer-is-spec-p)
-              (rspec-mode))))
+            (when (shoulda-buffer-is-spec-p)
+              (shoulda-mode))))
 
 ;; Add verify related spec keybinding to ruby ruby modes
 (add-hook 'ruby-mode-hook
           (lambda ()
-            (local-set-key (kbd "C-c ,v") 'rspec-verify)
-            (local-set-key (kbd "C-c ,a") 'rspec-verify-all)
-            (local-set-key (kbd "C-c ,t") 'rspec-toggle-spec-and-target)))
+            (local-set-key (kbd "C-c ,v") 'shoulda-verify)
+            (local-set-key (kbd "C-c ,a") 'shoulda-verify-all)
+            (local-set-key (kbd "C-c ,t") 'shoulda-toggle-spec-and-target)))
 
 ;; Add verify related spec keybinding to ruby ruby modes
 (add-hook 'rails-minor-mode-hook
           (lambda ()
-            (local-set-key (kbd "C-c ,v") 'rspec-verify)
-            (local-set-key (kbd "C-c ,a") 'rspec-verify-all)
-            (local-set-key (kbd "C-c ,t") 'rspec-toggle-spec-and-target)))
+            (local-set-key (kbd "C-c ,v") 'shoulda-verify)
+            (local-set-key (kbd "C-c ,a") 'shoulda-verify-all)
+            (local-set-key (kbd "C-c ,t") 'shoulda-toggle-spec-and-target)))
 
 ;; This hook makes any abbreviation that are defined in
-;; rspec-mode-abbrev-table available in rSpec buffers
-(add-hook 'rspec-mode-hook
+;; shoulda-mode-abbrev-table available in shoulda buffers
+(add-hook 'shoulda-mode-hook
           (lambda ()
-            (merge-abbrev-tables rspec-mode-abbrev-table
+            (merge-abbrev-tables shoulda-mode-abbrev-table
                                  local-abbrev-table)))
 
 ;; abbrev
@@ -295,10 +297,10 @@ as the value of the symbol, and the hook as the function definition."
              t)))
      old)))
 
-;; Setup better rspec output output
+;; Setup better shoulda output output
 (require 'mode-compile)
 (add-to-list 'compilation-error-regexp-alist '("\\(.*?\\)\\([0-9A-Za-z_./\:-]+\\.rb\\):\\([0-9]+\\)" 2 3))
-(add-to-list 'mode-compile-modes-alist '(rspec-mode . (respec-compile kill-compilation)))
+(add-to-list 'mode-compile-modes-alist '(shoulda-mode . (respec-compile kill-compilation)))
 
 
-(provide 'rspec-mode)
+(provide 'shoulda-mode)

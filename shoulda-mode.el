@@ -222,8 +222,8 @@
   "Returns the name of the example in which the point is currently positioned; or nil if it is outside of and example"
   (save-excursion 
     (end-of-line)
-    (re-search-backward "\\(\\(should\\|context\\)[[:space:]]+['\"]\\|def[[:space:]]+test_\\)\\(.*\\)\\(['\"][[:space:]]*\\(do\\|DO\\|Do\\|{\\)\\)?")
-    (match-string 3)))
+    (re-search-backward "\\(\\(should\\|context\\)[[:space:]]+['\"]\\|def[[:space:]]+test_\\)\\(.*\\)$")
+    (replace-regexp-in-string "\\(\\(['\"][[:space:]]*\\(do\\|DO\\|Do\\|{\\)\\)\\|()\\)[[:space:]]*$" "" (match-string 3))))
                     
 (defun shoulda-register-verify-redo (redoer)
   "Register a bit of code that will repeat a verification process"

@@ -135,7 +135,7 @@
 (defun shoulda-verify-single ()
   "Runs the specified example at the point of the current buffer."
   (interactive)
-  (shoulda-run-single-file (buffer-file-name) "-n" (concat "\"/" (replace-regexp-in-string "/" "\\\\/" (shoulda-example-name-at-point)) "/\"")))
+  (shoulda-run-single-file (buffer-file-name) "-n" (concat "\"/" (replace-regexp-in-string "[/()+?.]" "\\\\\\\\\\&" (shoulda-example-name-at-point)) "/\"")))
  
 (defun shoulda-verify-all ()
   "Runs the 'spec' rake task for the project of the current file."
@@ -222,8 +222,8 @@
   "Returns the name of the example in which the point is currently positioned; or nil if it is outside of and example"
   (save-excursion 
     (end-of-line)
-    (re-search-backward "\\(\\(should\\|context\\)[[:space:]]+['\"]\\|def[[:space:]]+test_\\)\\(.*\\)$")
-    (replace-regexp-in-string "\\(\\(['\"][[:space:]]*\\(do\\|DO\\|Do\\|{\\)\\)\\|()\\)[[:space:]]*$" "" (match-string 3))))
+    (re-search-backward "\\(\\(should\\|context\\)[[:space:](]+['\"]\\|def[[:space:]]+test_\\|should_[^[:space:](]+[[:space:](]['\"]\\)\\(.*\\)$")
+    (replace-regexp-in-string "\\(\\(['\"][)[:space:]]*\\(do\\|DO\\|Do\\|{\\)\\)\\|()\\)[[:space:]]*$" "" (match-string 3))))
                     
 (defun shoulda-register-verify-redo (redoer)
   "Register a bit of code that will repeat a verification process"
@@ -233,14 +233,13 @@
 (defun shoulda-run (&rest opts)
   "Runs spec with the specified options"
   (shoulda-register-verify-redo (cons 'shoulda-run opts))
-  (compile (concat "rake spec SPEC_OPTS=\'" (mapconcat (lambda (x) x) opts " ") "\'") t)
+  (compile (concat "rake spec SPEC_OPTS=\'" (mapconcat (lambda (x) x) opts " ") "\'"))
   (end-of-buffer-other-window 0))
 
 (defun shoulda-run-single-file (spec-file &rest opts)
   "Runs spec with the specified options"
   (shoulda-register-verify-redo (cons 'shoulda-run-single-file (cons spec-file opts)))
-  (message (concat "ruby " spec-file " " (mapconcat (lambda (x) x) opts " ")))
-  (compile (concat "ruby " spec-file " " (mapconcat (lambda (x) x) opts " ")) t)
+  (compile (concat "ruby " spec-file " " (mapconcat (lambda (x) x) opts " ")))
   (end-of-buffer-other-window 0))
 
 (defun shoulda-project-root (&optional directory)
@@ -296,10 +295,10 @@ as the value of the symbol, and the hook as the function definition."
              t)))
      old)))
 
-;; Setup better shoulda output output
-(require 'mode-compile)
-(add-to-list 'compilation-error-regexp-alist '(("\\([0-9A-Za-z_./\:-]+\\.rb\\):\\([0-9]+\\)" 1 2)))
-(add-to-list 'mode-compile-modes-alist '(shoulda-mode . (respec-compile kill-compilation)))
+(add-to-list 'compilation-error-regexp-alist-alist 
+	     '(shoulda "\\([0-9A-Za-z_./\:-]+\\.rb\\):\\([0-9]+\\)" 1 2))
+(add-to-list 'compilation-error-regexp-alist 'shoulda)
 
 
 (provide 'shoulda-mode)
+

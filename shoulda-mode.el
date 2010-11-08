@@ -67,6 +67,11 @@
   :lighter " shoulda"
   :keymap  shoulda-mode-keymap)
 
+(defcustom shoulda-command "ruby \"%f\" %o"
+  "The command to run when verifying should specs. \"%f\" will be replaced by the filename being tested. \"%o\" will be replaced by the options to test unit'"
+  :type 'string
+  :group 'rspec-mode)
+
 ;; Snippets
 (if (require 'snippet nil t)
     (snippet-with-abbrev-table
@@ -237,14 +242,22 @@
 (defun shoulda-run (&rest opts)
   "Runs spec with the specified options"
   (shoulda-register-verify-redo (cons 'shoulda-run opts))
-  (compile (concat "rake spec SPEC_OPTS=\'" (mapconcat (lambda (x) x) opts " ") "\'"))
+  (compile (concat "rake test TEST_OPTS=\'" (mapconcat (lambda (x) x) opts " ") "\'"))
   (end-of-buffer-other-window 0))
 
 (defun shoulda-run-single-file (spec-file &rest opts)
   "Runs spec with the specified options"
   (shoulda-register-verify-redo (cons 'shoulda-run-single-file (cons spec-file opts)))
-  (compile (concat "ruby " spec-file " " (mapconcat (lambda (x) x) opts " ")))
+  (compile (shoulda-inject-spec-file-name (shoulda-inject-options shoulda-command opts) spec-file))
   (end-of-buffer-other-window 0))
+
+(defun shoulda-inject-options (cmd-pattern opts-list)
+  "Replaces '%o' with options string"
+  (replace-regexp-in-string "%o" (mapconcat (lambda (x) x) opts " ") cmd-pattern))
+
+(defun shoulda-inject-spec-file-name (cmd-pattern spec-file)
+  "Replaces '%f' with file name"
+  (replace-regexp-in-string "%f" spec-file cmd-pattern))
 
 (defun shoulda-project-root (&optional directory)
   "Finds the root directory of the project by walking the directory tree until it finds a rake file."

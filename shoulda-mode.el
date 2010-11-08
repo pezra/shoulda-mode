@@ -135,8 +135,12 @@
 (defun shoulda-verify-single ()
   "Runs the specified example at the point of the current buffer."
   (interactive)
-  (shoulda-run-single-file (buffer-file-name) "-n" (concat "\"/" (replace-regexp-in-string "[/()+?.]" "\\\\\\\\\\&" (shoulda-example-name-at-point)) "/\"")))
- 
+  (shoulda-run-single-file (buffer-file-name) "-n" (shoulda-regexp-for-example (shoulda-example-name-at-point))))
+
+(defun shoulda-regexp-for-example (example-name)
+  "Converts example name into a regexp that matched the example name, escaping all regexp special characters"
+  (concat "\"/" (replace-regexp-in-string "[]\\[/\\(\\)+?.]" (lambda (m) (concat "\\\\\\\\\\\\\\\\" m)) example-name) "/\""))
+
 (defun shoulda-verify-all ()
   "Runs the 'spec' rake task for the project of the current file."
   (interactive)

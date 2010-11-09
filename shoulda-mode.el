@@ -70,7 +70,12 @@
 (defcustom shoulda-command "ruby \"%f\" %o"
   "The command to run when verifying should specs. \"%f\" will be replaced by the filename being tested. \"%o\" will be replaced by the options to test unit'"
   :type 'string
-  :group 'rspec-mode)
+  :group 'shoulda-mode)
+
+(defcustom shoulda-use-rvm nil
+  "t when RVM in is in use. (Requires rvm.el)"
+  :type 'boolean
+  :group 'shoulda-mode)
 
 ;; Snippets
 (if (require 'snippet nil t)
@@ -241,12 +246,16 @@
 
 (defun shoulda-run (&rest opts)
   "Runs spec with the specified options"
+  (if shoulda-use-rvm
+      (rvm-activate-corresponding-ruby (shoulda-project-root)))
   (shoulda-register-verify-redo (cons 'shoulda-run opts))
   (compile (concat "rake test TEST_OPTS=\'" (mapconcat (lambda (x) x) opts " ") "\'"))
   (end-of-buffer-other-window 0))
 
 (defun shoulda-run-single-file (spec-file &rest opts)
   "Runs spec with the specified options"
+  (if shoulda-use-rvm
+      (rvm-activate-corresponding-ruby (spec-file)))
   (shoulda-register-verify-redo (cons 'shoulda-run-single-file (cons spec-file opts)))
   (compile (shoulda-inject-spec-file-name (shoulda-inject-options shoulda-command opts) spec-file))
   (end-of-buffer-other-window 0))

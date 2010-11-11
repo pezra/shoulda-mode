@@ -247,7 +247,7 @@
 (defun shoulda-run (&rest opts)
   "Runs spec with the specified options"
   (if shoulda-use-rvm
-      (rvm-activate-corresponding-ruby (shoulda-project-root)))
+      (rvm-activate-corresponding-ruby))
   (shoulda-register-verify-redo (cons 'shoulda-run opts))
   (compile (concat "rake test TEST_OPTS=\'" (mapconcat (lambda (x) x) opts " ") "\'"))
   (end-of-buffer-other-window 0))
@@ -255,7 +255,7 @@
 (defun shoulda-run-single-file (spec-file &rest opts)
   "Runs spec with the specified options"
   (if shoulda-use-rvm
-      (rvm-activate-corresponding-ruby (spec-file)))
+      (rvm-activate-corresponding-ruby))
   (shoulda-register-verify-redo (cons 'shoulda-run-single-file (cons spec-file opts)))
   (compile (shoulda-inject-spec-file-name (shoulda-inject-options shoulda-command opts) spec-file))
   (end-of-buffer-other-window 0))
